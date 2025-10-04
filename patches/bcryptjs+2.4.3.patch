@@ -1,0 +1,12 @@
+diff --git a/node_modules/bcryptjs/dist/bcrypt.js b/node_modules/bcryptjs/dist/bcrypt.js
+index 2755513..383c273 100644
+--- a/node_modules/bcryptjs/dist/bcrypt.js
++++ b/node_modules/bcryptjs/dist/bcrypt.js
+@@ -1,6 +1,6 @@
+ "use strict";
+ var global=this||(typeof window!=='undefined'?window:globalThis);
+-var Buffer=Buffer||(typeof require==='function'?(function(){try{return require('buffer').Buffer}catch(e){}})():undefined);
++var Buffer=global.Buffer||(typeof require==='function'?(function(){try{return require('buffer').Buffer}catch(e){}})():undefined);
+ 
+ /**
+  * bcrypt.js
