@@ -56,53 +56,36 @@ export async function signup(values: z.infer<typeof signupSchema>) {
     
     const passwordHash = await bcrypt.hash(values.password, 12);
 
-    const companyCount = await prisma.company.count();
-    
-    if (companyCount > 0) {
-      const firstCompany = await prisma.company.findFirst();
-      if (!firstCompany) {
-         return { success: false, error: 'Could not find a company to join. Please contact support.' };
-      }
-      const user = await prisma.user.create({
+    let company = await prisma.company.findFirst();
+    let role = 'EMPLOYEE';
+
+    // If no company exists, this is the first user. Create the company and make them an admin.
+    if (!company) {
+      company = await prisma.company.create({
         data: {
-          name: values.name,
-          email: values.email,
-          passwordHash,
-          role: 'EMPLOYEE',
-          companyId: firstCompany.id,
-        }
+          name: values.companyName,
+          country: values.country,
+          currency: values.currency,
+        },
       });
-      await createSession(user.id, user.role, user.companyId);
-      return { success: true };
+      role = 'ADMIN';
     }
 
-    // First user signup: create company and admin user in a transaction
-    const user = await prisma.$transaction(async (tx) => {
-        const company = await tx.company.create({
-            data: {
-                name: values.companyName,
-                country: values.country,
-                currency: values.currency,
-            },
-        });
-
-        const newUser = await tx.user.create({
-            data: {
-              name: values.name,
-              email: values.email,
-              passwordHash,
-              role: 'ADMIN',
-              companyId: company.id,
-            },
-          });
-        return newUser;
+    const user = await prisma.user.create({
+      data: {
+        name: values.name,
+        email: values.email,
+        passwordHash,
+        role: role,
+        companyId: company.id,
+      },
     });
 
     await createSession(user.id, user.role, user.companyId);
 
     return { success: true };
   } catch (error) {
-    console.error(error)
+    console.error('Error during signup:', error);
     return { success: false, error: 'An unexpected error occurred during signup.' };
   }
 }
