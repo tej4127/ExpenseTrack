@@ -56,39 +56,45 @@ export async function signup(values: z.infer<typeof signupSchema>) {
     
     const passwordHash = await bcrypt.hash(values.password, 12);
 
-    // Transaction to ensure atomicity
-    const user = await prisma.$transaction(async (tx) => {
-        const companyCount = await tx.company.count();
-        let company;
-        let userRole: 'ADMIN' | 'EMPLOYEE';
+    const companyCount = await prisma.company.count();
 
-        if (companyCount === 0) {
-            // First user, create the company and set user as ADMIN
-            userRole = 'ADMIN';
-            company = await tx.company.create({
-                data: {
-                    name: values.companyName,
-                    country: values.country,
-                    currency: values.currency,
-                },
-            });
-        } else {
-            // Subsequent users join the first company as an EMPLOYEE
-            // This is simplified for the demo. A real app would have invites.
-            userRole = 'EMPLOYEE';
-            company = await tx.company.findFirst();
-            if (!company) {
-                // This should theoretically not happen if companyCount > 0
-                throw new Error("Could not find a company to join.");
-            }
+    if (companyCount > 0) {
+      // This is a simplified logic for demo. In a real app, you'd use an invite system.
+      // For now, we block new company signups after the first one.
+      const firstCompany = await prisma.company.findFirst();
+      if (!firstCompany) {
+         // This should not happen if count > 0, but as a safeguard.
+         return { success: false, error: 'Could not find a company to join. Please contact support.' };
+      }
+      const user = await prisma.user.create({
+        data: {
+          name: values.name,
+          email: values.email,
+          passwordHash,
+          role: 'EMPLOYEE',
+          companyId: firstCompany.id,
         }
+      });
+      await createSession(user.id, user.role, user.companyId);
+      return { success: true };
+    }
+
+    // First user signup: create company and admin user in a transaction
+    const user = await prisma.$transaction(async (tx) => {
+        const company = await tx.company.create({
+            data: {
+                name: values.companyName,
+                country: values.country,
+                currency: values.currency,
+            },
+        });
 
         const newUser = await tx.user.create({
             data: {
               name: values.name,
               email: values.email,
               passwordHash,
-              role: userRole,
+              role: 'ADMIN',
               companyId: company.id,
             },
           });
@@ -100,9 +106,6 @@ export async function signup(values: z.infer<typeof signupSchema>) {
     return { success: true };
   } catch (error) {
     console.error(error)
-    if (error instanceof Error && error.message.includes("could not be found or created")) {
-        return { success: false, error: error.message };
-    }
     return { success: false, error: 'An unexpected error occurred during signup.' };
   }
 }
