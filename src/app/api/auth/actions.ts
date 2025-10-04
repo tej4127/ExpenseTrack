@@ -1,9 +1,9 @@
 'use server';
 
 import { z } from 'zod';
-import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 import { createSession } from '@/lib/session';
+import { hashPassword, verifyPassword } from '@/lib/password';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -29,7 +29,7 @@ export async function login(values: z.infer<typeof loginSchema>) {
       return { success: false, error: 'Invalid email or password.' };
     }
 
-    const passwordMatch = await bcrypt.compare(values.password, user.passwordHash);
+    const passwordMatch = await verifyPassword(values.password, user.passwordHash);
 
     if (!passwordMatch) {
       return { success: false, error: 'Invalid email or password.' };
@@ -56,13 +56,11 @@ export async function signup(values: z.infer<typeof signupSchema>) {
       return { success: false, error: 'A user with this email already exists.' };
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await hashPassword(password);
     
-    // Check if any company exists. We'll use this to determine if this is the first signup.
     const companyCount = await prisma.company.count();
 
     if (companyCount === 0) {
-      // This is the first user. Create the company and the user as ADMIN in a transaction.
       const user = await prisma.$transaction(async (tx) => {
         const newCompany = await tx.company.create({
           data: {
@@ -89,10 +87,8 @@ export async function signup(values: z.infer<typeof signupSchema>) {
       return { success: true };
 
     } else {
-      // A company already exists. Join the first one found as an EMPLOYEE.
       const company = await prisma.company.findFirst();
       if (!company) {
-        // This case should theoretically not happen if companyCount > 0, but it's good practice to handle it.
         return { success: false, error: 'Could not find a company to join.' };
       }
 
