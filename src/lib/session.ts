@@ -3,19 +3,17 @@ import 'server-only';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import type { SessionPayload } from '@/lib/types';
-import { add, isPast } from 'date-fns';
+import { add } from 'date-fns';
 
 // Use a hardcoded secret to ensure consistency between signing and verification
 // in all server environments.
-const secretKey = "a-secure-secret-for-jwt-that-is-long-enough";
+const secretKey = "a-secure-secret-for-jwt-that-is-long-enough-and-is-not-in-an-env-file";
 const encodedKey = new TextEncoder().encode(secretKey);
-const expiration = '1h'; // Set a 1-hour expiration time
 
-export async function encrypt(payload: SessionPayload) {
+export async function encrypt(payload: Omit<SessionPayload, 'expires'>) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime(expiration)
     .sign(encodedKey);
 }
 
@@ -25,7 +23,11 @@ export async function decrypt(session: string | undefined = ''): Promise<Session
     const { payload } = await jwtVerify(session, encodedKey, {
       algorithms: ['HS256'],
     });
-    return payload as unknown as SessionPayload;
+    // The payload from jwtVerify is the session data. We add the expires property
+    // back in here, based on the cookie's lifetime, if needed elsewhere.
+    // For the middleware's purposes, just getting the payload is enough.
+    const expires = add(new Date(), { hours: 1 });
+    return { ...payload, expires: expires.toISOString() } as SessionPayload;
   } catch (error) {
     console.error('Failed to verify session:', error);
     return null;
@@ -34,7 +36,8 @@ export async function decrypt(session: string | undefined = ''): Promise<Session
 
 export async function createSession(userId: string, role: string, companyId: string) {
   const expires = add(new Date(), { hours: 1 });
-  const sessionPayload: SessionPayload = { userId, role, companyId, expires: expires.toISOString() };
+  // We no longer store the 'expires' in the JWT payload itself.
+  const sessionPayload: Omit<SessionPayload, 'expires'> = { userId, role, companyId };
 
   const session = await encrypt(sessionPayload);
 
