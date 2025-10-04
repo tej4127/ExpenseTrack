@@ -25,7 +25,7 @@ export async function login(values: z.infer<typeof loginSchema>) {
       where: { email: values.email },
     });
 
-    if (!user) {
+    if (!user || !user.passwordHash) {
       return { success: false, error: 'Invalid email or password.' };
     }
 
@@ -61,6 +61,7 @@ export async function signup(values: z.infer<typeof signupSchema>) {
     const companyCount = await prisma.company.count();
 
     if (companyCount === 0) {
+      // First user ever, create company and make them an ADMIN
       const user = await prisma.$transaction(async (tx) => {
         const newCompany = await tx.company.create({
           data: {
@@ -87,8 +88,10 @@ export async function signup(values: z.infer<typeof signupSchema>) {
       return { success: true };
 
     } else {
+      // Subsequent user, join the first company as an EMPLOYEE
       const company = await prisma.company.findFirst();
       if (!company) {
+        // This case should ideally not happen if companyCount > 0, but it's a good safeguard.
         return { success: false, error: 'Could not find a company to join.' };
       }
 
