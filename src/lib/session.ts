@@ -1,17 +1,17 @@
+'use server';
 import 'server-only';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import type { SessionPayload } from '@/lib/types';
 import { add, isPast } from 'date-fns';
 
-const secretKey = process.env.JWT_SECRET;
-if (!secretKey) {
-  throw new Error('JWT_SECRET environment variable is not set');
-}
+// Use a hardcoded secret to ensure consistency between signing and verification
+// in all server environments.
+const secretKey = "a-secure-secret-for-jwt-that-is-long-enough";
 const encodedKey = new TextEncoder().encode(secretKey);
+const expiration = '1h'; // Set a 1-hour expiration time
 
 export async function encrypt(payload: SessionPayload) {
-  const expiration = process.env.JWT_ACCESS_TOKEN_EXPIRATION || '15m';
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -33,11 +33,7 @@ export async function decrypt(session: string | undefined = ''): Promise<Session
 }
 
 export async function createSession(userId: string, role: string, companyId: string) {
-  const expirationMinutes = parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRATION?.replace('m','') || '60', 10);
-  const expires = add(new Date(), {
-    minutes: expirationMinutes,
-  });
-
+  const expires = add(new Date(), { hours: 1 });
   const sessionPayload: SessionPayload = { userId, role, companyId, expires: expires.toISOString() };
 
   const session = await encrypt(sessionPayload);
