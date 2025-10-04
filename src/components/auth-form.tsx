@@ -65,10 +65,10 @@ export function AuthForm({ mode }: AuthFormProps) {
       if (result.success) {
         toast({
           title: isSignup ? 'Account created' : 'Logged in',
-          description: isSignup ? 'Welcome to ExpenseWise!' : 'Welcome back!',
+          description: isSignup ? 'Welcome to ExpenseWise!' : 'Redirecting you to the dashboard...',
         });
-        router.push('/dashboard');
-        router.refresh();
+        // Use window.location.href for a more reliable redirect
+        window.location.href = '/dashboard';
       } else {
         toast({
           variant: 'destructive',
