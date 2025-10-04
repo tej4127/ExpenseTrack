@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, CheckCircle, Clock, Users } from 'lucide-react';
 import {
@@ -10,61 +10,52 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, subDays } from 'date-fns';
 
-async function getDashboardData(userId: string, companyId: string, role: string) {
+function getDummyDashboardData(role: string) {
+  const commonRecentExpenses = [
+    { id: '1', category: 'Travel', user: { name: 'John Doe' }, amountInCompanyCurrency: 150.75, status: 'APPROVED', date: subDays(new Date(), 2) },
+    { id: '2', category: 'Meals & Entertainment', user: { name: 'Jane Smith' }, amountInCompanyCurrency: 88.20, status: 'PENDING', date: subDays(new Date(), 1) },
+    { id: '3', category: 'Software', user: { name: 'Peter Jones' }, amountInCompanyCurrency: 49.99, status: 'APPROVED', date: subDays(new Date(), 5) },
+    { id: '4', category: 'Office Supplies', user: { name: 'Mary Johnson' }, amountInCompanyCurrency: 25.00, status: 'REJECTED', date: subDays(new Date(), 10) },
+    { id: '5', category: 'Travel', user: { name: 'John Doe' }, amountInCompanyCurrency: 450.00, status: 'PENDING', date: subDays(new Date(), 3) },
+  ];
+
   if (role === 'ADMIN') {
-    const [totalExpenses, approvedExpenses, pendingExpenses, userCount, recentExpenses] = await Promise.all([
-      prisma.expense.aggregate({ where: { companyId }, _sum: { amountInCompanyCurrency: true } }),
-      prisma.expense.count({ where: { companyId, status: 'APPROVED' } }),
-      prisma.expense.count({ where: { companyId, status: 'PENDING' } }),
-      prisma.user.count({ where: { companyId } }),
-      prisma.expense.findMany({
-        where: { companyId },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-        include: { user: { select: { name: true } } },
-      }),
-    ]);
-    return { totalExpenses: totalExpenses._sum.amountInCompanyCurrency, approvedExpenses, pendingExpenses, userCount, recentExpenses };
+    return { 
+      totalExpenses: 12560.50, 
+      approvedExpenses: 82, 
+      pendingExpenses: 15, 
+      userCount: 25, 
+      recentExpenses: commonRecentExpenses 
+    };
   } else if (role === 'MANAGER') {
-    const [teamMemberIds, pendingApprovals] = await Promise.all([
-        prisma.user.findMany({ where: { managerId: userId }, select: { id: true } }).then(users => users.map(u => u.id)),
-        prisma.expense.count({ where: { user: { managerId: userId }, status: 'PENDING' } })
-    ]);
-    const [totalTeamExpenses, recentTeamExpenses] = await Promise.all([
-        prisma.expense.aggregate({ where: { userId: { in: teamMemberIds } }, _sum: { amountInCompanyCurrency: true } }),
-        prisma.expense.findMany({ where: { userId: { in: teamMemberIds } }, orderBy: { createdAt: 'desc' }, take: 5, include: { user: { select: { name: true } } } }),
-    ]);
-    return { totalTeamExpenses: totalTeamExpenses._sum.amountInCompanyCurrency, pendingApprovals, recentExpenses: recentTeamExpenses };
+    return { 
+      totalTeamExpenses: 4580.30, 
+      pendingApprovals: 5, 
+      recentExpenses: commonRecentExpenses.filter(e => ['Jane Smith', 'Peter Jones'].includes(e.user.name))
+    };
   }
   // Employee
-  const [totalExpenses, approvedExpenses, pendingExpenses, recentExpenses] = await Promise.all([
-    prisma.expense.aggregate({ where: { userId }, _sum: { amountInCompanyCurrency: true } }),
-    prisma.expense.count({ where: { userId, status: 'APPROVED' } }),
-    prisma.expense.count({ where: { userId, status: 'PENDING' } }),
-    prisma.expense.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-    }),
-  ]);
-  return { totalExpenses: totalExpenses._sum.amountInCompanyCurrency, approvedExpenses, pendingExpenses, recentExpenses };
+  return { 
+    totalExpenses: 875.50, 
+    approvedExpenses: 8, 
+    pendingExpenses: 2, 
+    recentExpenses: commonRecentExpenses.filter(e => e.user.name === 'John Doe')
+  };
 }
 
 export default async function DashboardPage() {
   // Dummy session data to bypass authentication
   const session = {
-    userId: 'dummy-admin-id',
     role: 'ADMIN',
-    companyId: 'dummy-company-id',
   };
+  const companyCurrency = 'USD';
 
-  const data = await getDashboardData(session.userId, session.companyId, session.role);
-  const company = await prisma.company.findUnique({ where: {id: session.companyId}});
+  const data = getDummyDashboardData(session.role);
 
   const formatCurrency = (amount: number | null | undefined) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: company?.currency || 'USD' }).format(amount || 0);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: companyCurrency }).format(amount || 0);
   }
 
   const renderAdminDashboard = () => (
@@ -107,12 +98,13 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      {renderRecentExpensesTable(data.recentExpenses)}
     </>
   );
 
-    const renderManagerDashboard = () => (
+  const renderManagerDashboard = () => (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Team Expenses</CardTitle>
@@ -132,6 +124,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      {renderRecentExpensesTable(data.recentExpenses)}
     </>
   );
 
@@ -149,7 +142,7 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">My Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">Approved</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -158,7 +151,7 @@ export default async function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">My Pending</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -166,55 +159,74 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      {renderRecentExpensesTable(data.recentExpenses)}
     </>
   );
 
-  return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back! Here's a summary of your expense activity.
-        </p>
-      </div>
-      
-      {session.role === 'ADMIN' && renderAdminDashboard()}
-      {session.role === 'MANAGER' && renderManagerDashboard()}
-      {session.role === 'EMPLOYEE' && renderEmployeeDashboard()}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Expenses</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Category</TableHead>
-                {session.role !== 'EMPLOYEE' && <TableHead>Employee</TableHead>}
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
+  const renderRecentExpensesTable = (expenses: any[]) => (
+    <Card className="mt-8">
+      <CardHeader>
+        <CardTitle>Recent Expenses</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>User</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {expenses.map((expense) => (
+              <TableRow key={expense.id}>
+                <TableCell>{expense.user.name}</TableCell>
+                <TableCell>{expense.category}</TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span>{format(expense.date, 'PPP')}</span>
+                    <span className="text-xs text-muted-foreground">{formatDistanceToNow(expense.date, { addSuffix: true })}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={
+                    expense.status === 'APPROVED' ? 'default' : expense.status === 'PENDING' ? 'secondary' : 'destructive'
+                  } className={cn(
+                    expense.status === 'APPROVED' && 'bg-accent text-accent-foreground',
+                  )}>
+                    {expense.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">{formatCurrency(expense.amountInCompanyCurrency)}</TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.recentExpenses?.map((expense: any) => (
-                <TableRow key={expense.id}>
-                  <TableCell>{expense.category}</TableCell>
-                  {session.role !== 'EMPLOYEE' && <TableCell>{expense.user?.name}</TableCell>}
-                  <TableCell>{formatCurrency(expense.amountInCompanyCurrency)}</TableCell>
-                  <TableCell>
-                    <Badge variant={expense.status === 'APPROVED' ? 'default' : expense.status === 'PENDING' ? 'secondary' : 'destructive'} className={expense.status === 'APPROVED' ? 'bg-accent text-accent-foreground' : ''}>
-                      {expense.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell title={format(expense.date, 'PPP')}>{formatDistanceToNow(expense.date, { addSuffix: true })}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
+
+  const renderDashboard = () => {
+    switch(session.role) {
+      case 'ADMIN':
+        return renderAdminDashboard();
+      case 'MANAGER':
+        return renderManagerDashboard();
+      case 'EMPLOYEE':
+        return renderEmployeeDashboard();
+      default:
+        return <p>No dashboard available for your role.</p>;
+    }
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between space-y-2">
+        <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
+      </div>
+      {renderDashboard()}
+    </div>
+  )
 }
