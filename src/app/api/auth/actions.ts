@@ -46,44 +46,70 @@ export async function login(values: z.infer<typeof loginSchema>) {
 
 export async function signup(values: z.infer<typeof signupSchema>) {
   try {
+    const { companyName, country, currency, name, email, password } = values;
+
     const existingUser = await prisma.user.findUnique({
-      where: { email: values.email },
+      where: { email },
     });
 
     if (existingUser) {
       return { success: false, error: 'A user with this email already exists.' };
     }
+
+    const passwordHash = await bcrypt.hash(password, 12);
     
-    const passwordHash = await bcrypt.hash(values.password, 12);
+    // Check if any company exists. We'll use this to determine if this is the first signup.
+    const companyCount = await prisma.company.count();
 
-    let company = await prisma.company.findFirst();
-    let role = 'EMPLOYEE';
+    if (companyCount === 0) {
+      // This is the first user. Create the company and the user as ADMIN in a transaction.
+      const user = await prisma.$transaction(async (tx) => {
+        const newCompany = await tx.company.create({
+          data: {
+            name: companyName,
+            country: country,
+            currency: currency,
+          },
+        });
 
-    // If no company exists, this is the first user. Create the company and make them an admin.
-    if (!company) {
-      company = await prisma.company.create({
+        const newUser = await tx.user.create({
+          data: {
+            name,
+            email,
+            passwordHash,
+            role: 'ADMIN',
+            companyId: newCompany.id,
+          },
+        });
+
+        return newUser;
+      });
+
+      await createSession(user.id, user.role, user.companyId);
+      return { success: true };
+
+    } else {
+      // A company already exists. Join the first one found as an EMPLOYEE.
+      const company = await prisma.company.findFirst();
+      if (!company) {
+        // This case should theoretically not happen if companyCount > 0, but it's good practice to handle it.
+        return { success: false, error: 'Could not find a company to join.' };
+      }
+
+      const user = await prisma.user.create({
         data: {
-          name: values.companyName,
-          country: values.country,
-          currency: values.currency,
+          name,
+          email,
+          passwordHash,
+          role: 'EMPLOYEE',
+          companyId: company.id,
         },
       });
-      role = 'ADMIN';
+
+      await createSession(user.id, user.role, user.companyId);
+      return { success: true };
     }
 
-    const user = await prisma.user.create({
-      data: {
-        name: values.name,
-        email: values.email,
-        passwordHash,
-        role: role,
-        companyId: company.id,
-      },
-    });
-
-    await createSession(user.id, user.role, user.companyId);
-
-    return { success: true };
   } catch (error) {
     console.error('Error during signup:', error);
     return { success: false, error: 'An unexpected error occurred during signup.' };
