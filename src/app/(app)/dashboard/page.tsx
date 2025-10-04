@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format, formatDistanceToNow, subDays } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 function getDummyDashboardData(role: string) {
   const commonRecentExpenses = [
