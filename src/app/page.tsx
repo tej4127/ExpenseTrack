@@ -11,13 +11,11 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // A simple check to see if a session cookie exists.
-    // The middleware is the primary guard.
-    if (document.cookie.includes('session=')) {
-      router.replace('/dashboard');
-    } else {
-      router.replace('/login');
-    }
+    // The middleware is the primary guard. This is a fallback.
+    // We will attempt to redirect to the dashboard, and the middleware will
+    // handle redirecting to /login if there's no session.
+    router.replace('/dashboard');
+
     // We don't want to show the loading screen for too long if redirection fails
     const timer = setTimeout(() => setLoading(false), 2000);
     return () => clearTimeout(timer);
