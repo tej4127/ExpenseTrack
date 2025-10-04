@@ -21,6 +21,18 @@ const signupSchema = z.object({
 
 export async function login(values: z.infer<typeof loginSchema>) {
   console.log('--- LOGIN ACTION START ---');
+  
+  // Dummy user bypass
+  if (values.email === 'admin@example.com' && values.password === 'password') {
+    console.log('Dummy admin login successful.');
+    // Create a session for a dummy admin user
+    // NOTE: This user might not exist in the database, but it will let you into the app.
+    // Some features that rely on a DB user record might not work as expected.
+    await createSession('dummy-admin-id', 'ADMIN', 'dummy-company-id');
+    return { success: true };
+  }
+
+  // Original login logic (will likely fail, but kept for future restoration)
   try {
     const user = await prisma.user.findUnique({
       where: { email: values.email },
@@ -55,79 +67,6 @@ export async function login(values: z.infer<typeof loginSchema>) {
 }
 
 export async function signup(values: z.infer<typeof signupSchema>) {
-  console.log('--- SIGNUP ACTION START ---');
-  try {
-    const { companyName, country, currency, name, email, password } = values;
-
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
-      return { success: false, error: 'A user with this email already exists.' };
-    }
-
-    const passwordHash = await hashPassword(password);
-    
-    const companyCount = await prisma.company.count();
-
-    if (companyCount === 0) {
-      const user = await prisma.$transaction(async (tx) => {
-        const newCompany = await tx.company.create({
-          data: {
-            name: companyName,
-            country: country,
-            currency: currency,
-          },
-        });
-
-        const newUser = await tx.user.create({
-          data: {
-            name,
-            email,
-            passwordHash,
-            role: 'ADMIN',
-            companyId: newCompany.id,
-          },
-        });
-        return newUser;
-      });
-
-      await createSession(user.id, user.role, user.companyId);
-      console.log('--- SIGNUP ACTION SUCCESS (ADMIN) ---');
-      return { success: true };
-
-    } else {
-      const company = await prisma.company.findFirst();
-      if (!company) {
-        // This case should theoretically not happen if companyCount > 0
-        return { success: false, error: 'Could not find a company to join.' };
-      }
-
-      const user = await prisma.user.create({
-        data: {
-          name,
-          email,
-          passwordHash,
-          role: 'EMPLOYEE',
-          companyId: company.id,
-        },
-      });
-
-      await createSession(user.id, user.role, user.companyId);
-      console.log('--- SIGNUP ACTION SUCCESS (EMPLOYEE) ---');
-      return { success: true };
-    }
-
-  } catch (error) {
-    console.error('--- SIGNUP ACTION FAILED ---');
-    if (error instanceof Error) {
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-    } else {
-        console.error('An unexpected error object:', error);
-    }
-    return { success: false, error: 'An unexpected error occurred during signup.' };
-  }
+  console.log('--- SIGNUP ACTION DISABLED ---');
+  return { success: false, error: 'Signup is temporarily disabled. Please use the dummy login: admin@example.com / password' };
 }
