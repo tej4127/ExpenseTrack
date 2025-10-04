@@ -39,6 +39,7 @@ export async function login(values: z.infer<typeof loginSchema>) {
 
     return { success: true };
   } catch (error) {
+    console.error(error);
     return { success: false, error: 'An unexpected error occurred.' };
   }
 }
@@ -53,31 +54,17 @@ export async function signup(values: z.infer<typeof signupSchema>) {
       return { success: false, error: 'A user with this email already exists.' };
     }
     
-    // In a real app, you'd check if this is the very first user ever to create a company,
-    // or if they are being invited. For this project, we assume first signup creates a new company.
-    const companyCount = await prisma.company.count();
-    
-    let userRole: 'ADMIN' | 'EMPLOYEE' = 'EMPLOYEE';
-    if (companyCount === 0) {
-        userRole = 'ADMIN';
-    } else {
-        // This is a simplified logic. A real application would have an invitation system.
-        // For now, any subsequent signup fails unless we change logic.
-        // Let's allow signup but they become employees of the first company for demo purposes.
-        const firstCompany = await prisma.company.findFirst();
-        if (!firstCompany) {
-            return { success: false, error: 'Could not find a company to join.' };
-        }
-        values.companyName = firstCompany.name;
-        values.country = firstCompany.country;
-        values.currency = firstCompany.currency;
-    }
-
     const passwordHash = await bcrypt.hash(values.password, 12);
-    
+
+    // Transaction to ensure atomicity
     const user = await prisma.$transaction(async (tx) => {
+        const companyCount = await tx.company.count();
         let company;
-        if (userRole === 'ADMIN') {
+        let userRole: 'ADMIN' | 'EMPLOYEE';
+
+        if (companyCount === 0) {
+            // First user, create the company and set user as ADMIN
+            userRole = 'ADMIN';
             company = await tx.company.create({
                 data: {
                     name: values.companyName,
@@ -86,10 +73,15 @@ export async function signup(values: z.infer<typeof signupSchema>) {
                 },
             });
         } else {
+            // Subsequent users join the first company as an EMPLOYEE
+            // This is simplified for the demo. A real app would have invites.
+            userRole = 'EMPLOYEE';
             company = await tx.company.findFirst();
+            if (!company) {
+                // This should theoretically not happen if companyCount > 0
+                throw new Error("Could not find a company to join.");
+            }
         }
-
-        if(!company) throw new Error("Company could not be found or created.");
 
         const newUser = await tx.user.create({
             data: {
@@ -103,12 +95,14 @@ export async function signup(values: z.infer<typeof signupSchema>) {
         return newUser;
     });
 
-
     await createSession(user.id, user.role, user.companyId);
 
     return { success: true };
   } catch (error) {
     console.error(error)
+    if (error instanceof Error && error.message.includes("could not be found or created")) {
+        return { success: false, error: error.message };
+    }
     return { success: false, error: 'An unexpected error occurred during signup.' };
   }
 }
