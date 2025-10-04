@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-landing",
+      "description": "A professional setting with charts and graphs, representing financial management.",
+      "imageUrl": "https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxmaW5hbmNpYWwlMjBtYW5hZ2VtZW50fGVufDB8fHx8MTc1OTU3MDUwNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "financial management"
+    },
+    {
+      "id": "auth-background",
+      "description": "An abstract, professional background image for the login and signup screen.",
+      "imageUrl": "https://images.unsplash.com/photo-1623998020636-dcaf7ab08b32?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxhYnN0cmFjdCUyMHByb2Zlc3Npb25hbHxlbnwwfHx8fDE3NTk1MTM2MzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract professional"
+    },
+    {
+      "id": "receipt-placeholder",
+      "description": "A placeholder image for a receipt.",
+      "imageUrl": "https://images.unsplash.com/photo-1662001164155-2d04179a7b22?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxyZWNlaXB0JTIwcGFwZXJ8ZW58MHx8fHwxNzU5NTY2NTc3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "receipt paper"
+    }
+  ]
 }
