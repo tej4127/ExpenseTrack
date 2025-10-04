@@ -57,13 +57,10 @@ export async function signup(values: z.infer<typeof signupSchema>) {
     const passwordHash = await bcrypt.hash(values.password, 12);
 
     const companyCount = await prisma.company.count();
-
+    
     if (companyCount > 0) {
-      // This is a simplified logic for demo. In a real app, you'd use an invite system.
-      // For now, we block new company signups after the first one.
       const firstCompany = await prisma.company.findFirst();
       if (!firstCompany) {
-         // This should not happen if count > 0, but as a safeguard.
          return { success: false, error: 'Could not find a company to join. Please contact support.' };
       }
       const user = await prisma.user.create({
