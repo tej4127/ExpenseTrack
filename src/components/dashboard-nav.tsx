@@ -5,10 +5,9 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Wallet,
-  FilePlus2,
-  Users,
-  Building,
   GitPullRequestArrow,
+  Building,
+  Users,
   Gavel,
 } from 'lucide-react';
 
@@ -93,7 +92,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname.startsWith(item.href) && (item.href !== '/expenses' || pathname === '/expenses')}
+                  isActive={pathname.startsWith(item.href) && (item.href !== '/expenses' || pathname === '/expenses') && item.href !== '/admin'}
                   tooltip={{ children: item.label }}
                 >
                   <Link href={item.href}>
