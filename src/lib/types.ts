@@ -6,5 +6,4 @@ export type SessionPayload = {
   userId: string;
   role: string;
   companyId: string;
-  expires: string;
 };

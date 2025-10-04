@@ -10,7 +10,7 @@ import { add } from 'date-fns';
 const secretKey = "a-secure-secret-for-jwt-that-is-long-enough-and-is-not-in-an-env-file";
 const encodedKey = new TextEncoder().encode(secretKey);
 
-export async function encrypt(payload: Omit<SessionPayload, 'expires'>) {
+export async function encrypt(payload: SessionPayload) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -23,11 +23,7 @@ export async function decrypt(session: string | undefined = ''): Promise<Session
     const { payload } = await jwtVerify(session, encodedKey, {
       algorithms: ['HS256'],
     });
-    // The payload from jwtVerify is the session data. We add the expires property
-    // back in here, based on the cookie's lifetime, if needed elsewhere.
-    // For the middleware's purposes, just getting the payload is enough.
-    const expires = add(new Date(), { hours: 1 });
-    return { ...payload, expires: expires.toISOString() } as SessionPayload;
+    return payload as SessionPayload;
   } catch (error) {
     console.error('Failed to verify session:', error);
     return null;
@@ -36,8 +32,7 @@ export async function decrypt(session: string | undefined = ''): Promise<Session
 
 export async function createSession(userId: string, role: string, companyId: string) {
   const expires = add(new Date(), { hours: 1 });
-  // We no longer store the 'expires' in the JWT payload itself.
-  const sessionPayload: Omit<SessionPayload, 'expires'> = { userId, role, companyId };
+  const sessionPayload: SessionPayload = { userId, role, companyId };
 
   const session = await encrypt(sessionPayload);
 
