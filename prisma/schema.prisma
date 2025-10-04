@@ -1,149 +1,61 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model Company {
   id        String   @id @default(cuid())
   name      String
-  country   String
-  currency  String
-  createdAt DateTime @default(now()) @map("created_at")
+  currency  String   @default("USD")
   users     User[]
   expenses  Expense[]
-  rules     ApprovalRule[]
-
-  @@map("companies")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model User {
-  id                String   @id @default(cuid())
-  companyId         String   @map("company_id")
+  id                String    @id @default(cuid())
+  email             String    @unique
   name              String
-  email             String   @unique
-  passwordHash      String   @map("password_hash")
-  role              Role     @default(EMPLOYEE)
-  managerId         String?  @map("manager_id")
-  isManagerApprover Boolean  @default(false) @map("is_manager_approver")
-  createdAt         DateTime @default(now()) @map("created_at")
+  role              String    @default("EMPLOYEE") // ADMIN, MANAGER, EMPLOYEE
+  companyId         String
+  company           Company   @relation(fields: [companyId], references: [id])
+  expenses          Expense[]
+  managerId         String?
+  manager           User?     @relation("TeamMembers", fields: [managerId], references: [id])
+  teamMembers       User[]    @relation("TeamMembers")
+  isManagerApprover Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  manager         User?            @relation("ManagerSubordinates", fields: [managerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  subordinates    User[]           @relation("ManagerSubordinates")
-  expenses        Expense[]
-  approvals       ApprovalStep[]
-  createdRules    ApprovalRule[]
-  sessions        Session[]
-
-  @@map("users")
-}
-
-// Session model for handling multiple user sessions and refresh tokens
-model Session {
-  id           String   @id @default(cuid())
-  userId       String   @map("user_id")
-  refreshToken String   @unique @map("refresh_token")
-  expiresAt    DateTime @map("expires_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
+  @@index([companyId])
+  @@index([managerId])
 }
 
 model Expense {
-  id                      String   @id @default(cuid())
-  companyId               String   @map("company_id")
-  userId                  String   @map("user_id")
-  amount                  Float
-  currency                String
-  amountInCompanyCurrency Float    @map("amount_in_company_currency")
-  category                String
-  description             String?
-  date                    DateTime
-  status                  ExpenseStatus @default(PENDING)
-  createdAt               DateTime      @default(now()) @map("created_at")
-  vendor                  String?
+  id                        String   @id @default(cuid())
+  userId                    String
+  user                      User     @relation(fields: [userId], references: [id])
+  companyId                 String
+  company                   Company  @relation(fields: [companyId], references: [id])
+  amount                    Float
+  currency                  String
+  amountInCompanyCurrency   Float
+  category                  String
+  date                      DateTime
+  description               String?
+  vendor                    String
+  status                    String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  receiptUrl                String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
-  company     Company            @relation(fields: [companyId], references: [id])
-  user        User               @relation(fields: [userId], references: [id])
-  attachments ExpenseAttachment[]
-  approvals   ApprovalStep[]
-
-  @@map("expenses")
-}
-
-model ExpenseAttachment {
-  id         String   @id @default(cuid())
-  expenseId  String   @map("expense_id")
-  filePath   String   @map("file_path")
-  fileType   String   @map("file_type")
-  uploadedAt DateTime @default(now()) @map("uploaded_at")
-
-  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-
-  @@map("expense_attachments")
-}
-
-model ApprovalStep {
-  id              String         @id @default(cuid())
-  expenseId       String         @map("expense_id")
-  stepIndex       Int            @map("step_index")
-  approverUserId  String?        @map("approver_user_id")
-  approverRole    Role?          @map("approver_role")
-  status          ApprovalStatus @default(PENDING)
-  decidedAt       DateTime?      @map("decided_at")
-  comment         String?
-
-  expense      Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  approverUser User?   @relation(fields: [approverUserId], references: [id], onDelete: SetNull)
-
-  @@map("approval_steps")
-}
-
-model ApprovalRule {
-  id                      String      @id @default(cuid())
-  companyId               String      @map("company_id")
-  name                    String
-  ruleType                RuleType    @map("rule_type")
-  percentage              Int?
-  specificApproverUserId  String?     @map("specific_approver_user_id")
-  active                  Boolean     @default(true)
-
-  company          Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  specificApprover User?   @relation(fields: [specificApproverUserId], references: [id], onDelete: SetNull)
-
-  @@map("approval_rules")
-}
-
-enum Role {
-  ADMIN
-  MANAGER
-  EMPLOYEE
-}
-
-enum ExpenseStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  SKIPPED
-}
-
-enum RuleType {
-  PERCENTAGE
-  SPECIFIC_APPROVER
-  HYBRID
+  @@index([userId])
+  @@index([companyId])
 }
