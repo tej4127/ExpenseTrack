@@ -1,12 +1,12 @@
 
-generator client {
-  provider = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-1.0.x"]
-}
-
 datasource db {
   provider = "sqlite"
   url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl"]
 }
 
 model Company {
@@ -20,42 +20,48 @@ model Company {
 }
 
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  name              String
-  role              String    @default("EMPLOYEE") // ADMIN, MANAGER, EMPLOYEE
-  companyId         String
-  company           Company   @relation(fields: [companyId], references: [id])
-  expenses          Expense[]
-  managerId         String?
-  manager           User?     @relation("TeamMembers", fields: [managerId], references: [id])
-  teamMembers       User[]    @relation("TeamMembers")
-  isManagerApprover Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  @@index([companyId])
-  @@index([managerId])
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  passwordHash   String
+  role           Role      @default(EMPLOYEE)
+  company        Company   @relation(fields: [companyId], references: [id])
+  companyId      String
+  expenses       Expense[]
+  manager        User?     @relation("ManagerTeam", fields: [managerId], references: [id])
+  managerId      String?
+  teamMembers    User[]    @relation("ManagerTeam")
+  isManagerApprover Boolean @default(false)
+  createdAt      DateTime  @default(now())
 }
 
 model Expense {
-  id                        String   @id @default(cuid())
-  userId                    String
-  user                      User     @relation(fields: [userId], references: [id])
-  companyId                 String
-  company                   Company  @relation(fields: [companyId], references: [id])
-  amount                    Float
-  currency                  String
-  amountInCompanyCurrency   Float
-  category                  String
-  date                      DateTime
-  description               String?
-  vendor                    String
-  status                    String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  receiptUrl                String?
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  user                     User     @relation(fields: [userId], references: [id])
+  userId                   String
+  company                  Company  @relation(fields- [companyId], references: [id])
+  companyId                String
+  amount                   Float
+  currency                 String
+  amountInCompanyCurrency  Float
+  category                 String
+  date                     DateTime
+  description              String?
+  vendor                   String
+  receiptUrl               String?
+  status                   Status   @default(PENDING)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
 
-  @@index([userId])
-  @@index([companyId])
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum Status {
+  PENDING
+  APPROVED
+  REJECTED
 }
