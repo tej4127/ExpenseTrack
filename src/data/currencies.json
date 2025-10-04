@@ -1,5 +1,6 @@
 
 [
+  
   { "code": "USD", "name": "United States Dollar" },
   { "code": "EUR", "name": "Euro" },
   { "code": "JPY", "name": "Japanese Yen" },

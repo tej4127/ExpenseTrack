@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, CheckCircle, Clock, Users } from 'lucide-react';
+
 import {
   Table,
   TableBody,

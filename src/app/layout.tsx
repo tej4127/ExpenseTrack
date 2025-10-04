@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: 'Full-Stack Expense Management App',
 };
 
+
+
 export default function RootLayout({
   children,
 }: Readonly<{

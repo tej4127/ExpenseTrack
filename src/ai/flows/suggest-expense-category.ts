@@ -11,6 +11,8 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+
+
 const SuggestExpenseCategoryInputSchema = z.object({
   description: z.string().describe('The description of the expense.'),
   ocrData: z.string().optional().describe('The data parsed from the receipt using OCR, if available.'),

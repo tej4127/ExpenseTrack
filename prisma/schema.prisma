@@ -9,6 +9,8 @@ generator client {
   binaryTargets = ["native", "linux-musl"]
 }
 
+
+
 model Company {
   id        String   @id @default(cuid())
   name      String

@@ -8,6 +8,7 @@
  * - CategorizeExpenseWithAIOutput - The return type for the categorizeExpenseWithAI function.
  */
 
+
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 

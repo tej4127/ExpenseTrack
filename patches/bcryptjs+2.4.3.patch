@@ -8,5 +8,6 @@ index 2755513..383c273 100644
 -var Buffer=Buffer||(typeof require==='function'?(function(){try{return require('buffer').Buffer}catch(e){}})():undefined);
 +var Buffer=global.Buffer||(typeof require==='function'?(function(){try{return require('buffer').Buffer}catch(e){}})():undefined);
  
+ 
  /**
   * bcrypt.js

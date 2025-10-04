@@ -1,4 +1,5 @@
 export default function ApprovalsPage() {
+   
     return (
         <div>
             <h1 className="text-3xl font-bold font-headline">Team Approvals</h1>

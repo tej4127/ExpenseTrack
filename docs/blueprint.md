@@ -2,6 +2,7 @@
 
 ## Core Features:
 
+
 - Custom Authentication: Secure user authentication using bcrypt and JWT, with role-based access control (Admin, Manager, Employee).
 - Expense Submission: Allow employees to submit expenses with details such as amount, currency, category, description, and attachments. Also handle the OCR parsing on attachment to pre-fill some details using the Tesseract.js tool
 - Multi-Level Approval Workflow: Implement a configurable multi-level approval process for expenses, based on predefined rules and roles.

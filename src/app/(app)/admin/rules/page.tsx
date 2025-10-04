@@ -1,4 +1,5 @@
 export default function AdminRulesPage() {
+    
     return (
         <div>
             <h1 className="text-3xl font-bold font-headline">Approval Rules</h1>

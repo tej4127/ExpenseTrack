@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 // This component now immediately redirects to the dashboard, bypassing login.
+
+
 export default function HomePage() {
   const router = useRouter();
 
