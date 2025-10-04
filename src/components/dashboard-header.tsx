@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { User } from '@/lib/types';
-import { deleteSession } from '@/lib/session';
 
 type DashboardHeaderProps = {
   user: User;
@@ -30,8 +29,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
     .join('');
 
   const handleLogout = async () => {
-    await deleteSession();
-    router.push('/login');
+    // Since auth is bypassed, just redirect to the dashboard page
+    // which now serves as the home page.
+    router.push('/dashboard');
   };
 
   return (

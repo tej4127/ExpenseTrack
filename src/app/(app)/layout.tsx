@@ -1,6 +1,3 @@
-import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/session';
-import prisma from '@/lib/prisma';
 import type { User } from '@/lib/types';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { DashboardNav } from '@/components/dashboard-nav';
@@ -11,29 +8,17 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
-
-  if (!session) {
-    redirect('/login');
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      companyId: true,
-      createdAt: true,
-      isManagerApprover: true,
-      managerId: true
-    },
-  });
-
-  if (!user) {
-    redirect('/login');
-  }
+  // Dummy user object to bypass authentication
+  const user: User = {
+    id: 'dummy-admin-id',
+    name: 'Admin User',
+    email: 'admin@example.com',
+    role: 'ADMIN',
+    companyId: 'dummy-company-id',
+    createdAt: new Date(),
+    isManagerApprover: true,
+    managerId: null,
+  };
 
   return (
     <SidebarProvider>
